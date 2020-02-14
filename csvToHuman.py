@@ -15,6 +15,7 @@ parser.add_argument('--valle','-v', type=float, help='Precio del kWh en valle')
 parser.add_argument('--super','-s', type=float, help='Precio del kWh en super valle')
 parser.add_argument('--potencia','-k', type=float, help='Potencia contratada en kW')
 parser.add_argument('--precioPotencia','-pp', type=float, help='Precio del kW/dia en termino de potencia')
+parser.add_argument('--tarifa','-t', type=str,default='DHS', help='Tipo de tarifa, por defecto DHS tres tramos. opciones DH, 2.0')
 
 args = parser.parse_args()
 
@@ -32,6 +33,7 @@ precioValle=args.valle
 precioSuper=args.super
 potencia=args.potencia
 precioPotencia=args.precioPotencia
+tarifa=args.tarifa
 
 print(args)
 
@@ -59,14 +61,34 @@ for index, row in lectura.iterrows():
         valle=0
         superValle=0
     consumoDia=consumoDia+consumo
-    if(hora >= 1 and hora <= 7):
-        superValle=superValle+consumo
-        #print('hora valle: '  + str(round(hora))
-    elif(hora >= 22 or hora >= 7 and hora < 11):
-        valle=valle+consumo
-        #print('hora valle: '  + str(round(hora))
-    else:
-        punta=punta+consumo
+    if(tarifa == 'DHS'):
+        if(hora >= 2 and hora <= 7):
+            superValle=superValle+consumo
+        elif(hora > 23 or hora > 7 and hora <= 13 or hora == 1):
+            valle=valle+consumo
+        else:
+            punta=punta+consumo
+    elif(tarifa == 'DH'):
+        from datetime import datetime as dt
+        ano=int(fecha.split('/')[2])
+        dia = dt.strptime(fecha, "%d/%m/%Y")
+        verano = dt.strptime('3/21/%s'%(ano), "%m/%d/%Y")
+        invierno = dt.strptime('9/22/%s'%(ano), "%m/%d/%Y")
+        # print(fecha.split('/'))
+        # mes=int(fecha.split('/')[1])
+        # dia=int(fecha.split('/')[0])
+        # print(dia)
+        # print(mes)
+        if((dia > verano) and (dia < invierno)):
+            if(hora >= 1 or hora <= 14):
+                valle=valle+consumo
+            else:
+                punta=punta+consumo
+        else:
+            if(hora > 23 or hora <= 13):
+                valle=valle+consumo
+            else:
+                punta=punta+consumo
 if(not precioPunta):
     print('Consumo del ' + fecha + ': ' + str(round(consumoDia,2))+ 'kW' + ' Punta: ' + str(round(punta,2))+ 'kW'  + ' Valle:'+ str(round(valle,2))+ 'kW'  + ' Supervalle:' + str(round(superValle,2))+ 'kW' )
 generalPunta=generalPunta+punta
